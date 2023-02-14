@@ -1,10 +1,16 @@
 // SPDX-License-Identifier: MIT
+// Author: @diogowernik
+// Version: 1.0.0
+// Build for: https://wtr.ee/buymeacoffee
 
 pragma solidity ^0.8.17;
 
 import "../node_modules/hardhat/console.sol";
 
 contract BuyCoffee {
+
+    // Models Profile and Coffee
+
     // Struct to hold the details of each profile
     struct Profile {
         address wallet_address;  // The address of the profile's wallet
@@ -19,8 +25,32 @@ contract BuyCoffee {
         uint256 timestamp;       // The timestamp of the purchase
     }
 
+    // Contract
+
     // Array to hold all coffee purchases
     Coffee[] public coffee;
+
+    // Total balance of the contract
+    uint256 public total_contract_balance;
+
+    // Constructor function to initialize the contract
+    constructor() payable {
+        console.log("Initialize Smart Contract");
+        profiles[msg.sender].wallet_address = msg.sender;
+        profiles[msg.sender].balance = msg.value;       
+    }
+
+    // Function to return the current balance of the contract
+    function getContractBalance() public view returns (uint256) {
+        return total_contract_balance;
+    }
+
+    // Function to return an array of all coffee purchases
+    function getAllCoffee() public view returns (Coffee[] memory) {
+        return coffee;
+    }
+
+    // Profile 
 
     // Mapping of profiles to their wallet addresses and balances
     mapping (address => Profile) public profiles;
@@ -30,20 +60,6 @@ contract BuyCoffee {
         if (profiles[profile].wallet_address == address(0)) {
             profiles[profile].wallet_address = profile;
         }
-    }
-
-    // Total balance of the contract
-    uint256 public total_contract_balance;
-
-    // Constructor function to initialize the contract
-    constructor() payable {
-        console.log("Initialize Smart Contract");
-        profiles[msg.sender].wallet_address = msg.sender;
-    }
-
-    // Function to return the current balance of the contract
-    function getContractBalance() public view returns (uint256) {
-        return total_contract_balance;
     }
 
     // Function to allow supporters to buy a coffee for an profile
@@ -71,21 +87,40 @@ contract BuyCoffee {
         total_contract_balance += msg.value;
     }
 
-    // Function to return an array of all coffee purchases
-    function getAllCoffee() public view returns (Coffee[] memory) {
-        return coffee;
+    // Function to return an array of all coffee purchases for a specific profile
+    function getCoffeeByProfile(address profile) public view returns (Coffee[] memory) {
+        Coffee[] memory result = new Coffee[](coffee.length);
+        uint256 counter = 0;
+        for (uint256 i = 0; i < coffee.length; i++) {
+            if (coffee[i].profile == profile) {
+                result[counter] = coffee[i];
+                counter++;
+            }
+        }
+        Coffee[] memory result2 = new Coffee[](counter);
+        for (uint256 i = 0; i < counter; i++) {
+            result2[i] = result[i];
+        }
+        return result2;
     }
 
-    // Function for profiles to withdraw their funds
-    function withdraw() public {
-        // Get the current balance of the contract
-        uint256 amount = address(this).balance;
-        // Check if the contract has any funds to withdraw
-        require(amount > 0, "You have no ethers to withdraw");
-        // Check if the profile has any funds to withdraw
-        (bool success, ) = msg.sender.call{value: amount}("");
-        
-        require(success, "Withdraw failed");
+    // Function to return the current balance of an profile
+    function getProfileBalance(address profile) public view returns (uint256) {
+        return profiles[profile].balance;
+    }
+
+    // Function to allow an profile to withdraw their balance
+    function withdrawProfileBalance() public {
+        // Check that the profile has a balance
+        require(profiles[msg.sender].balance > 0, "Profile has no balance");
+        // Check that the profile has enough ETH to withdraw their balance
+        require(msg.sender.balance >= profiles[msg.sender].balance, "Profile doesn't have enough ETH to withdraw their balance");
+        // Transfer the profile's balance to their wallet
+        payable(msg.sender).transfer(profiles[msg.sender].balance);
+        // Subtract the profile's balance from the total contract balance
+        total_contract_balance -= profiles[msg.sender].balance;
+        // Reset the profile's balance to 0
+        profiles[msg.sender].balance = 0;
     }
 
 }

@@ -109,18 +109,27 @@ contract BuyCoffee {
         return profiles[profile].balance;
     }
 
-    // Function to allow an profile to withdraw their balance
+    // Declare the Withdrawal event outside of the function
+    event Withdrawal(address indexed profile, uint256 amount);
+
+    // Function to allow a profile to withdraw their balance
     function withdrawProfileBalance() public {
         // Check that the profile has a balance
         require(profiles[msg.sender].balance > 0, "Profile has no balance");
+        // Store the profile's balance in a local variable
+        uint256 amount = profiles[msg.sender].balance;
         // Check that the profile has enough ETH to withdraw their balance
-        require(msg.sender.balance >= profiles[msg.sender].balance, "Profile doesn't have enough ETH to withdraw their balance");
-        // Transfer the profile's balance to their wallet
-        payable(msg.sender).transfer(profiles[msg.sender].balance);
-        // Subtract the profile's balance from the total contract balance
-        total_contract_balance -= profiles[msg.sender].balance;
-        // Reset the profile's balance to 0
+        require(address(this).balance >= amount, "Contract doesn't have enough ETH to fulfill the withdrawal");
+        // Reset the profile's balance to 0 before sending the funds to prevent reentrancy attacks
         profiles[msg.sender].balance = 0;
+        // Subtract the profile's balance from the total contract balance
+        total_contract_balance -= amount;
+        // Transfer the profile's balance to their wallet
+        (bool success,) = msg.sender.call{value: amount}("");
+        require(success, "Withdrawal failed");
+        // Emit an event to log the withdrawal
+        emit Withdrawal(msg.sender, amount);
     }
 
 }
+

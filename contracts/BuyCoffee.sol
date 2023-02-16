@@ -22,7 +22,7 @@ contract BuyCoffee {
         address profile;          // The address of the profile who received the purchase
         address supporter;       // The address of the person who made the purchase
         uint256 amount;          // The amount of ETH sent in the purchase
-        uint256 timestamp;       // The timestamp of the purchase
+        uint256 contract_id;       // The unique identifier of the purchase
     }
 
     // Contract
@@ -63,7 +63,7 @@ contract BuyCoffee {
     }
 
     // Function to allow supporters to buy a coffee for an profile
-    function buymeacoffee(address profile) public payable {
+    function buymeacoffee(address profile, uint256 contract_id) public payable {
         // Check if the supporter has enough ETH to make the purchase
         require(msg.sender.balance >= msg.value, "You don't have enough ETH");
         // Call the setter function to enforce the creation of an profile record
@@ -72,13 +72,16 @@ contract BuyCoffee {
         require(profile != msg.sender, "You can't buy your own coffee");
         // Check that the profile's address is a valid address (not the zero address)
         require(profile != address(0), "Profile address cannot be the zero address");
+        // Check that the contract_id is a number greater than 0
+        require(contract_id > 0, "Contract ID must be greater than 0");
+
 
         // Add the purchase to the `coffee` array
         coffee.push(Coffee(
             profile,
             msg.sender,
             msg.value,
-            block.timestamp
+            contract_id 
         ));
 
         // Add the purchase amount to the profile's balance
